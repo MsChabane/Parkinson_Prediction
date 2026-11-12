@@ -1,0 +1,65 @@
+
+stages:
+  download_data:
+    cmd: python -m src.stages.01_download_data
+    deps:
+      - src/stages/01_download_data.py
+      - src/config/mlflow_helper.py
+    params:
+      - download
+      - mlflow
+    outs:
+      - data/raw/spiral_embeddings.pkl
+      - data/raw/spiral_image_model_with_schema.pkl
+      - data/raw/voice_parkinsons.csv
+
+  preprocess_and_pair:
+    cmd: python -m src.stages.02_build_pairs_and_preprocess
+    deps:
+      - src/stages/02_build_pairs_and_preprocess.py
+      - data/raw/spiral_embeddings.pkl
+      - data/raw/voice_parkinsons.csv
+    params:
+      - seed
+      - preprocess
+    outs:
+      - data/processed/paired_multimodal_splits.pkl
+      - artifacts/preprocessors/voice_scaler.pkl
+      - artifacts/preprocessors/img_emb_scaler.pkl
+      - artifacts/preprocessors/img_pca.pkl
+      - artifacts/preprocessors/unimodal_voice_models.pkl
+
+  train_multimodal:
+    cmd: python -m src.stages.03_train_multimodal
+    deps:
+      - src/stages/03_train_multimodal.py
+      - data/processed/paired_multimodal_splits.pkl
+      - data/raw/spiral_image_model_with_schema.pkl
+      - artifacts/preprocessors/voice_scaler.pkl
+      - artifacts/preprocessors/img_emb_scaler.pkl
+      - artifacts/preprocessors/img_pca.pkl
+      - artifacts/preprocessors/unimodal_voice_models.pkl
+    params:
+      - seed
+      - train
+    outs:
+      - artifacts/models/all_multimodal_candidates.pkl
+      - artifacts/models/multimodal_best_with_schema.pkl
+
+  evaluate:
+    cmd: python -m src.stages.04_evaluate
+    deps:
+      - src/stages/04_evaluate.py
+      - data/processed/paired_multimodal_splits.pkl
+      - artifacts/models/all_multimodal_candidates.pkl
+      - artifacts/models/multimodal_best_with_schema.pkl
+    params:
+      - train.min_f1_to_save
+    outs:
+      - artifacts/plots/multimodal_roc_comparison.png
+      - artifacts/plots/multimodal_pr_comparison.png
+      - artifacts/plots/multimodal_confusion_matrices.png
+      - artifacts/metrics/multimodal_leaderboard.csv
+    metrics:
+      - artifacts/metrics/evaluation_summary.json:
+          cache: false

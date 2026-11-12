@@ -1,0 +1,199 @@
+schema: '2.0'
+stages:
+  download_data:
+    cmd: python -m src.stages.01_download_data
+    deps:
+    - path: src/config/mlflow_helper.py
+      hash: md5
+      md5: a7cd15305aa22464c452e6d4ef627c10
+      size: 2072
+    - path: src/stages/01_download_data.py
+      hash: md5
+      md5: a64c34b6f665dc330dbc6b3e1f34ea38
+      size: 3545
+    params:
+      params.yaml:
+        download:
+          source_run_id: 2b1d2b41a53c4a669a80f27fa853e82d
+          exp_tag: exp20_resnet34_radam_lr0.0001_bs16_fr0.3
+          embedding_artifact_path: 
+            embeddings/exp20_resnet34_radam_lr0.0001_bs16_fr0.3/spiral_exp20_resnet34_radam_lr0.0001_bs16_fr0.3_embeddings.pkl
+          image_model_artifact_path: 
+            models/exp20_resnet34_radam_lr0.0001_bs16_fr0.3/pickle_bundle/spiral_exp20_resnet34_radam_lr0.0001_bs16_fr0.3_with_schema.pkl
+          voice_data_url: 
+            https://archive.ics.uci.edu/ml/machine-learning-databases/parkinsons/parkinsons.data
+          raw_dir: data/raw
+        mlflow:
+          experiment_name: Parkinsons_Multimodal_Pipeline
+          run_name: DVC_Multimodal_Pipeline_Run2
+          reuse_shared_run_id: true
+          run_id_file: artifacts/mlflow_run_id.txt
+    outs:
+    - path: data/raw/spiral_embeddings.pkl
+      hash: md5
+      md5: 7c1ab13f081f72972e2a94ddf2dbe582
+      size: 147458
+    - path: data/raw/spiral_image_model_with_schema.pkl
+      hash: md5
+      md5: 1968e7432714aa08f5e5d926fcc15abe
+      size: 170840035
+    - path: data/raw/voice_parkinsons.csv
+      hash: md5
+      md5: f87be9fba12bad26e138350208b558ee
+      size: 37705
+  preprocess_and_pair:
+    cmd: python -m src.stages.02_build_pairs_and_preprocess
+    deps:
+    - path: data/raw/spiral_embeddings.pkl
+      hash: md5
+      md5: 7c1ab13f081f72972e2a94ddf2dbe582
+      size: 147458
+    - path: data/raw/voice_parkinsons.csv
+      hash: md5
+      md5: f87be9fba12bad26e138350208b558ee
+      size: 37705
+    - path: src/stages/02_build_pairs_and_preprocess.py
+      hash: md5
+      md5: b9b5a11f9711cfd9f4e8da54afcb30c4
+      size: 6536
+    params:
+      params.yaml:
+        preprocess:
+          selected_voice_features:
+          - MDVP:Fo
+          - MDVP:Flo
+          - MDVP:Shimmer
+          - HNR
+          - RPDE
+          - DFA
+          - spread1
+          - spread2
+          - D2
+          - PPE
+          test_size: 0.2
+          val_size: 0.18
+          pca_components: 10
+          voice_svm_c: 10.0
+          voice_et_estimators: 200
+          voice_svm_weight: 0.55
+          voice_et_weight: 0.45
+          pair_noise_std: 0.02
+        seed: 42
+    outs:
+    - path: artifacts/preprocessors/img_emb_scaler.pkl
+      hash: md5
+      md5: 6ba247798b63b346c78d892d55b9b1ad
+      size: 1961
+    - path: artifacts/preprocessors/img_pca.pkl
+      hash: md5
+      md5: a49af54f9e259e7e530e18208223d758
+      size: 3652
+    - path: artifacts/preprocessors/unimodal_voice_models.pkl
+      hash: md5
+      md5: f2e2f10c9d4a759a0e9215ba42077ec7
+      size: 1100452
+    - path: artifacts/preprocessors/voice_scaler.pkl
+      hash: md5
+      md5: 328e60b721db49ac381960dc7d36f516
+      size: 656
+    - path: data/processed/paired_multimodal_splits.pkl
+      hash: md5
+      md5: 0ad2cda6aafe08e18ce0e84f3dd2795d
+      size: 180441
+  train_multimodal:
+    cmd: python -m src.stages.03_train_multimodal
+    deps:
+    - path: artifacts/preprocessors/img_emb_scaler.pkl
+      hash: md5
+      md5: 6ba247798b63b346c78d892d55b9b1ad
+      size: 1961
+    - path: artifacts/preprocessors/img_pca.pkl
+      hash: md5
+      md5: a49af54f9e259e7e530e18208223d758
+      size: 3652
+    - path: artifacts/preprocessors/unimodal_voice_models.pkl
+      hash: md5
+      md5: f2e2f10c9d4a759a0e9215ba42077ec7
+      size: 1100452
+    - path: artifacts/preprocessors/voice_scaler.pkl
+      hash: md5
+      md5: 328e60b721db49ac381960dc7d36f516
+      size: 656
+    - path: data/processed/paired_multimodal_splits.pkl
+      hash: md5
+      md5: 0ad2cda6aafe08e18ce0e84f3dd2795d
+      size: 180441
+    - path: data/raw/spiral_image_model_with_schema.pkl
+      hash: md5
+      md5: 1968e7432714aa08f5e5d926fcc15abe
+      size: 170840035
+    - path: src/stages/03_train_multimodal.py
+      hash: md5
+      md5: 0bdeaf2cfa77e1ac77a3f65ecdee0fb2
+      size: 6848
+    params:
+      params.yaml:
+        seed: 42
+        train:
+          min_f1_to_save: 0.9
+          svm_c: 5.0
+          rf_estimators: 300
+          et_estimators: 300
+          gb_estimators: 150
+          gb_lr: 0.05
+          mlp_hidden:
+          - 64
+          - 32
+          - 16
+    outs:
+    - path: artifacts/models/all_multimodal_candidates.pkl
+      hash: md5
+      md5: 2878d6b4a49a50b3ec6823a06cef40bd
+      size: 2236400
+    - path: artifacts/models/multimodal_best_with_schema.pkl
+      hash: md5
+      md5: 54ac2eb4080cc6e270a548206d7cceba
+      size: 86543069
+  evaluate:
+    cmd: python -m src.stages.04_evaluate
+    deps:
+    - path: artifacts/models/all_multimodal_candidates.pkl
+      hash: md5
+      md5: 2878d6b4a49a50b3ec6823a06cef40bd
+      size: 2236400
+    - path: artifacts/models/multimodal_best_with_schema.pkl
+      hash: md5
+      md5: 54ac2eb4080cc6e270a548206d7cceba
+      size: 86543069
+    - path: data/processed/paired_multimodal_splits.pkl
+      hash: md5
+      md5: 0ad2cda6aafe08e18ce0e84f3dd2795d
+      size: 180441
+    - path: src/stages/04_evaluate.py
+      hash: md5
+      md5: fadc8cf5e466dce6c1547cd591c249f9
+      size: 8324
+    params:
+      params.yaml:
+        train.min_f1_to_save: 0.9
+    outs:
+    - path: artifacts/metrics/evaluation_summary.json
+      hash: md5
+      md5: 4c5e7d6914705b875367b09389f7cdd6
+      size: 1221
+    - path: artifacts/metrics/multimodal_leaderboard.csv
+      hash: md5
+      md5: 5caa4a5ad45b743648f42ec22bc33a99
+      size: 1651
+    - path: artifacts/plots/multimodal_confusion_matrices.png
+      hash: md5
+      md5: f4c0be8fd406989ca8b757ebddbf84ea
+      size: 103176
+    - path: artifacts/plots/multimodal_pr_comparison.png
+      hash: md5
+      md5: beee848df0f6e6992559f6089ed09637
+      size: 150678
+    - path: artifacts/plots/multimodal_roc_comparison.png
+      hash: md5
+      md5: a8da9e2ad1e8bddcbe01be91ca3dcfb3
+      size: 188830

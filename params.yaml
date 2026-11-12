@@ -1,0 +1,46 @@
+
+seed: 42
+
+mlflow:
+  experiment_name: "Parkinsons_Multimodal_Pipeline"
+  run_name: "DVC_Multimodal_Pipeline_Run2"
+  reuse_shared_run_id: true
+  run_id_file: "artifacts/mlflow_run_id.txt"
+
+download:
+  source_run_id: "2b1d2b41a53c4a669a80f27fa853e82d"
+  exp_tag: "exp20_resnet34_radam_lr0.0001_bs16_fr0.3"
+  embedding_artifact_path: "embeddings/exp20_resnet34_radam_lr0.0001_bs16_fr0.3/spiral_exp20_resnet34_radam_lr0.0001_bs16_fr0.3_embeddings.pkl"
+  image_model_artifact_path: "models/exp20_resnet34_radam_lr0.0001_bs16_fr0.3/pickle_bundle/spiral_exp20_resnet34_radam_lr0.0001_bs16_fr0.3_with_schema.pkl"
+  voice_data_url: "https://archive.ics.uci.edu/ml/machine-learning-databases/parkinsons/parkinsons.data"
+  raw_dir: "data/raw"
+
+preprocess:
+  selected_voice_features:
+    - "MDVP:Fo"
+    - "MDVP:Flo"
+    - "MDVP:Shimmer"
+    - "HNR"
+    - "RPDE"
+    - "DFA"
+    - "spread1"
+    - "spread2"
+    - "D2"
+    - "PPE"
+  test_size: 0.20
+  val_size: 0.18
+  pca_components: 10
+  voice_svm_c: 10.0
+  voice_et_estimators: 200
+  voice_svm_weight: 0.55
+  voice_et_weight: 0.45
+  pair_noise_std: 0.02
+
+train:
+  min_f1_to_save: 0.90
+  svm_c: 5.0
+  rf_estimators: 300
+  et_estimators: 300
+  gb_estimators: 150
+  gb_lr: 0.05
+  mlp_hidden: [64, 32,16]
